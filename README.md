@@ -32,7 +32,7 @@ The integration uses the first light and the first fan returned by the Mars Hydr
 
 - Light brightness control through a Home Assistant light entity.
 - Fan strength control through a Home Assistant fan entity with a 25-100 percent percentage slider.
-- Power switches for detected lights and fans.
+- Power switch for detected lights.
 - Brightness sensor for detected lights.
 - Fan sensors for temperature, humidity, and speed.
 - Temperature sensor unit selection during setup: Celsius or Fahrenheit.
@@ -48,7 +48,6 @@ Detected lights can create:
 Detected fans can create:
 
 - `fan`: fan strength control
-- `switch`: fan power
 - `sensor`: temperature in the selected unit
 - `sensor`: humidity percentage
 - `sensor`: fan speed in RPM

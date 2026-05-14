@@ -17,7 +17,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
             _LOGGER.debug("No Mars Hydro light found; brightness sensor not created.")
 
         if devices.get("WIND"):
-            temperature_unit = entry.data.get("temperature_unit", "F")
+            temperature_unit = entry.options.get(
+                "temperature_unit", entry.data.get("temperature_unit", "F")
+            )
             temperature_sensor = (
                 MarsHydroFanTemperatureCelsiusSensor(api, entry.entry_id)
                 if temperature_unit == "C"
@@ -51,9 +53,7 @@ class MarsHydroBrightnessSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        if self._device_name and self._device_id:
-            return f"{self._device_name} Brightness Sensor ({self._device_id})"
-        elif self._device_name:
+        if self._device_name:
             return f"{self._device_name} Brightness Sensor"
         return "Mars Hydro Brightness Sensor"
 
@@ -125,9 +125,7 @@ class MarsHydroFanTemperatureSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the fan temperature sensor."""
-        if self._device_name and self._device_id:
-            return f"{self._device_name} Temperature Sensor ({self._device_id})"
-        elif self._device_name:
+        if self._device_name:
             return f"{self._device_name} Temperature Sensor"
         return "Mars Hydro Fan Temperature Sensor"
 
@@ -207,11 +205,7 @@ class MarsHydroFanTemperatureCelsiusSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the fan temperature sensor (Celsius)."""
-        if self._device_name and self._device_id:
-            return (
-                f"{self._device_name} Temperature Sensor (Celsius) ({self._device_id})"
-            )
-        elif self._device_name:
+        if self._device_name:
             return f"{self._device_name} Temperature Sensor (Celsius)"
         return "Mars Hydro Fan Temperature Sensor (Celsius)"
 
@@ -293,9 +287,7 @@ class MarsHydroFanHumiditySensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the fan humidity sensor."""
-        if self._device_name and self._device_id:
-            return f"{self._device_name} Humidity Sensor ({self._device_id})"
-        elif self._device_name:
+        if self._device_name:
             return f"{self._device_name} Humidity Sensor"
         return "Mars Hydro Fan Humidity Sensor"
 
@@ -375,9 +367,7 @@ class MarsHydroFanSpeedSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the fan speed sensor."""
-        if self._device_name and self._device_id:
-            return f"{self._device_name} Speed Sensor ({self._device_id})"
-        elif self._device_name:
+        if self._device_name:
             return f"{self._device_name} Speed Sensor"
         return "Mars Hydro Fan Speed Sensor"
 

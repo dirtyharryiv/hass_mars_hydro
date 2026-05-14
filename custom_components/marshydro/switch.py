@@ -17,9 +17,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             _LOGGER.debug("No Mars Hydro light found; light switch not created.")
 
         if devices.get("WIND"):
-            entities.append(MarsHydroSwitch(api, entry.entry_id, device_type="WIND"))
-        else:
-            _LOGGER.debug("No Mars Hydro fan found; fan switch not created.")
+            _LOGGER.debug("Fan switch not created; fan entity handles power control.")
 
         if entities:
             async_add_entities(entities, update_before_add=True)
@@ -40,9 +38,7 @@ class MarsHydroSwitch(SwitchEntity):
     @property
     def name(self):
         """Return the name of the switch, dynamically including the device name and ID."""
-        if self._device_name and self._device_id:
-            return f"{self._device_name} Switch ({self._device_id})"
-        elif self._device_name:
+        if self._device_name:
             return f"{self._device_name} Switch"
         return f"Mars Hydro {self._device_type.capitalize()} Switch"
 

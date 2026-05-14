@@ -7,6 +7,10 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+OPTIONS_FLOW_BASE = getattr(
+    config_entries, "OptionsFlowWithReload", config_entries.OptionsFlow
+)
+
 
 class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Mars Hydro."""
@@ -82,14 +86,11 @@ class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
         """Get the options flow."""
-        return MarsHydroOptionsFlow(config_entry)
+        return MarsHydroOptionsFlow()
 
 
-class MarsHydroOptionsFlow(config_entries.OptionsFlow):
+class MarsHydroOptionsFlow(OPTIONS_FLOW_BASE):
     """Handle an options flow for Mars Hydro."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry):
-        self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None) -> FlowResult:
         """Handle the options flow."""
@@ -100,7 +101,13 @@ class MarsHydroOptionsFlow(config_entries.OptionsFlow):
 
         options_schema = vol.Schema(
             {
-                vol.Required("update_interval", default=30): int,
+                vol.Required(
+                    "temperature_unit",
+                    default=self.config_entry.options.get(
+                        "temperature_unit",
+                        self.config_entry.data.get("temperature_unit", "C"),
+                    ),
+                ): vol.In(["C", "F"]),
             }
         )
 

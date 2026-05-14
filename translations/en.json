@@ -18,5 +18,14 @@
                 }
             }
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "temperature_unit": "Temperature unit"
+                }
+            }
+        }
     }
 }
