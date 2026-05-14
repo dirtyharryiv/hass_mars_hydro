@@ -129,7 +129,7 @@ class MarsHydroAPI:
                 "deviceImage": device_data.get("deviceImg"),
             }
         else:
-            _LOGGER.warning("No light devices found.")
+            _LOGGER.debug("No light devices found.")
             return None
 
     async def get_fandata(self):
@@ -149,7 +149,7 @@ class MarsHydroAPI:
                 "deviceImage": device_data.get("deviceImg"),
             }
         else:
-            _LOGGER.warning("No fan devices found.")
+            _LOGGER.debug("No fan devices found.")
             return None
 
     async def set_brightness(self, brightness):

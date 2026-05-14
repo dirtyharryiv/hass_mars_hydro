@@ -4,12 +4,25 @@ from . import _LOGGER, DOMAIN
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the switch platform."""
-    api = hass.data[DOMAIN][entry.entry_id].get("api")
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    api = entry_data.get("api")
+    devices = entry_data.get("devices", {})
 
     if api:
-        light_switch = MarsHydroSwitch(api, entry.entry_id, device_type="LIGHT")
-        fan_switch = MarsHydroSwitch(api, entry.entry_id, device_type="WIND")
-        async_add_entities([light_switch, fan_switch], update_before_add=True)
+        entities = []
+
+        if devices.get("LIGHT"):
+            entities.append(MarsHydroSwitch(api, entry.entry_id, device_type="LIGHT"))
+        else:
+            _LOGGER.debug("No Mars Hydro light found; light switch not created.")
+
+        if devices.get("WIND"):
+            entities.append(MarsHydroSwitch(api, entry.entry_id, device_type="WIND"))
+        else:
+            _LOGGER.debug("No Mars Hydro fan found; fan switch not created.")
+
+        if entities:
+            async_add_entities(entities, update_before_add=True)
 
 
 class MarsHydroSwitch(SwitchEntity):
@@ -121,11 +134,8 @@ class MarsHydroSwitch(SwitchEntity):
                 ]  # Set deviceName dynamically
                 self._state = not device_data["isClose"]
                 self._available = True
-                _LOGGER.info(
-                    f"Switch state updated: {'ON' if self._state else 'OFF'} for {self._device_name}"
-                )
             else:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     f"Could not update switch state for {self._device_type}."
                 )
                 self._available = False

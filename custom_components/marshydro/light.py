@@ -6,11 +6,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Mars Hydro Light entity."""
     _LOGGER.debug("Mars Hydro Light async_setup_entry called")
 
-    api = hass.data[DOMAIN][entry.entry_id].get("api")
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    api = entry_data.get("api")
+    light_data = entry_data.get("devices", {}).get("LIGHT")
 
-    if api:
+    if api and light_data:
         light = MarsHydroBrightnessLight(api, entry.entry_id)
         async_add_entities([light], update_before_add=True)
+    elif api:
+        _LOGGER.debug("No Mars Hydro light found; light entity not created.")
 
 
 class MarsHydroBrightnessLight(LightEntity):
@@ -133,13 +137,13 @@ class MarsHydroBrightnessLight(LightEntity):
                 self._brightness = int((light_data["deviceLightRate"] / 100) * 255)
                 self._state = not light_data["isClose"]
                 self._available = True
-                _LOGGER.info(
+                _LOGGER.debug(
                     f"Updated light: {self._device_name}, brightness: {self._brightness}"
                 )
             else:
                 self._available = False
                 self._state = None
-                _LOGGER.warning("Couldn't retrieve light data")
+                _LOGGER.debug("Couldn't retrieve light data")
         except Exception as e:
             self._available = False
             self._state = None

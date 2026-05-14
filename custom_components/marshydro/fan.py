@@ -4,12 +4,16 @@ from . import _LOGGER, DOMAIN
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Mars Hydro fan entity."""
-    api = hass.data[DOMAIN][entry.entry_id].get("api")
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    api = entry_data.get("api")
+    fan_data = entry_data.get("devices", {}).get("WIND")
 
-    if api:
+    if api and fan_data:
         fan_entity = MarsHydroFanEntity(api, entry.entry_id)
         async_add_entities([fan_entity], update_before_add=True)
         _LOGGER.info("Mars Hydro fan entity added successfully.")
+    elif api:
+        _LOGGER.debug("No Mars Hydro fan found; fan entity not created.")
     else:
         _LOGGER.error("API instance not found. Cannot set up fan entity.")
 
@@ -57,7 +61,7 @@ class MarsHydroFanEntity(FanEntity):
     def device_info(self):
         """Return device information for linking with the device registry."""
         if not self._device_id or not self._device_name:
-            _LOGGER.warning("Device info incomplete for fan entity.")
+            _LOGGER.debug("Device info incomplete for fan entity.")
             return None
 
         return {
@@ -108,10 +112,7 @@ class MarsHydroFanEntity(FanEntity):
                     # Convert speed to integer and clamp it
                     self._speed_percentage = min(max(int(raw_speed), 25), 100)
                     self._available = True
-                    _LOGGER.info(
-                        f"Fan state updated: {self._speed_percentage}% for {self._device_name}"
-                    )
-                except ValueError:
+                except (TypeError, ValueError):
                     _LOGGER.warning(
                         f"Invalid speed data for fan {self._device_name}: {raw_speed}"
                     )
@@ -119,7 +120,7 @@ class MarsHydroFanEntity(FanEntity):
                     self._available = False
             else:
                 self._available = False
-                _LOGGER.warning("Could not update fan state.")
+                _LOGGER.debug("Could not update fan state.")
         except Exception as e:
             self._available = False
             _LOGGER.error(f"Error updating fan state: {e}")

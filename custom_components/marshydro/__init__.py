@@ -26,7 +26,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await api.login()
 
     hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {"api": api}
+    hass.data[DOMAIN][entry.entry_id] = {"api": api, "devices": {}}
+    devices = hass.data[DOMAIN][entry.entry_id]["devices"]
 
     # Gerät registrieren
     device_registry = dr.async_get(hass)
@@ -34,6 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Light-Gerät registrieren
     light_data = await api.get_lightdata()
     if light_data:
+        devices["LIGHT"] = light_data
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, light_data["id"])},
@@ -45,11 +47,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"Light Device {light_data['deviceName']} wurde erfolgreich registriert."
         )
     else:
-        _LOGGER.warning("Kein Light-Gerät gefunden, Registrierung übersprungen.")
+        _LOGGER.debug("Kein Light-Gerät gefunden, Registrierung übersprungen.")
 
     # Fan-Gerät registrieren
     fan_data = await api.get_fandata()
     if fan_data:
+        devices["WIND"] = fan_data
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
             identifiers={(DOMAIN, fan_data["id"])},
@@ -61,7 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"Fan Device {fan_data['deviceName']} wurde erfolgreich registriert."
         )
     else:
-        _LOGGER.warning("Kein Fan-Gerät gefunden, Registrierung übersprungen.")
+        _LOGGER.debug("Kein Fan-Gerät gefunden, Registrierung übersprungen.")
 
     # Plattformen laden
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
