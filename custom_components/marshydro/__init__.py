@@ -8,7 +8,7 @@ from .api import MarsHydroAPI
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["sensor", "light", "switch", "fan"]  # Sensor hinzugefügt
+PLATFORMS = ["sensor", "light", "switch", "fan", "number"]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:

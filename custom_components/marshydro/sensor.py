@@ -23,7 +23,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     MarsHydroFanTemperatureCelsiusSensor(api, entry.entry_id),
                     MarsHydroFanHumiditySensor(api, entry.entry_id),
                     MarsHydroFanSpeedSensor(api, entry.entry_id),
-                    MarsHydroFanStrengthSensor(api, entry.entry_id),
                 ]
             )
         else:
@@ -355,88 +354,6 @@ class MarsHydroFanHumiditySensor(SensorEntity):
         except Exception as e:
             self._available = False
             _LOGGER.error(f"Error updating fan humidity sensor: {e}")
-
-
-class MarsHydroFanStrengthSensor(SensorEntity):
-    """Representation of the Mars Hydro fan strength percentage sensor."""
-
-    def __init__(self, api, entry_id):
-        self._api = api
-        self._device_id = None
-        self._device_name = None
-        self._strength = None
-        self._available = True
-        self._entry_id = entry_id
-
-    @property
-    def name(self):
-        """Return the name of the fan strength sensor."""
-        if self._device_name and self._device_id:
-            return f"{self._device_name} Strength Sensor ({self._device_id})"
-        elif self._device_name:
-            return f"{self._device_name} Strength Sensor"
-        return "Mars Hydro Fan Strength Sensor"
-
-    @property
-    def native_value(self):
-        """Return the fan's strength percentage."""
-        return self._strength
-
-    @property
-    def available(self):
-        """Return True if the sensor is available."""
-        return self._available
-
-    @property
-    def native_unit_of_measurement(self):
-        """Return the unit of measurement."""
-        return "%"
-
-    @property
-    def unique_id(self):
-        """Return a unique ID for the fan strength sensor."""
-        return (
-            f"{self._entry_id}_fan_strength_sensor_{self._device_id}"
-            if self._device_id
-            else f"{self._entry_id}_fan_strength_sensor"
-        )
-
-    @property
-    def device_info(self):
-        """Return device information for linking with the fan device registry."""
-        if not self._device_id or not self._device_name:
-            return None
-
-        return {
-            "identifiers": {(DOMAIN, self._device_id)},
-            "name": self._device_name,
-            "manufacturer": "Mars Hydro",
-            "model": "Mars Hydro Fan",
-        }
-
-    async def async_update(self):
-        """Update the fan strength sensor state."""
-        try:
-            fan_data = await self._api.safe_api_call(self._api.get_fandata)
-            if fan_data:
-                self._device_id = fan_data["id"]
-                self._device_name = fan_data["deviceName"]
-                raw_strength = fan_data.get("deviceLightRate")
-
-                try:
-                    self._strength = min(max(int(raw_strength), 0), 100)
-                    self._available = True
-                except (TypeError, ValueError):
-                    _LOGGER.warning("Invalid fan strength data: %s", raw_strength)
-                    self._strength = None
-                    self._available = False
-            else:
-                self._available = False
-                self._strength = None
-                _LOGGER.debug("Could not update fan strength sensor.")
-        except Exception as e:
-            self._available = False
-            _LOGGER.error(f"Error updating fan strength sensor: {e}")
 
 
 class MarsHydroFanSpeedSensor(SensorEntity):
