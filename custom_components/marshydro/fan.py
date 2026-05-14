@@ -26,8 +26,10 @@ class MarsHydroFanEntity(FanEntity):
         self._device_id = None
         self._device_name = None
         self._speed_percentage = None
+        self._state = None
         self._available = True
         self._entry_id = entry_id
+        self._enable_turn_on_off_backwards_compatibility = False
 
     @property
     def name(self):
@@ -47,6 +49,11 @@ class MarsHydroFanEntity(FanEntity):
     def percentage(self):
         """Return the current speed percentage of the fan."""
         return self._speed_percentage
+
+    @property
+    def is_on(self):
+        """Return True if the fan is on."""
+        return self._state
 
     @property
     def unique_id(self):
@@ -74,10 +81,64 @@ class MarsHydroFanEntity(FanEntity):
     @property
     def supported_features(self):
         """Return supported features of the fan."""
-        return FanEntityFeature.SET_SPEED  # Support speed adjustment only
+        features = FanEntityFeature.SET_SPEED
+
+        if hasattr(FanEntityFeature, "TURN_ON"):
+            features |= FanEntityFeature.TURN_ON
+        if hasattr(FanEntityFeature, "TURN_OFF"):
+            features |= FanEntityFeature.TURN_OFF
+
+        return features
+
+    async def async_turn_on(self, percentage=None, preset_mode=None, **kwargs):
+        """Turn the fan on."""
+        try:
+            if not await self._async_ensure_device_id():
+                _LOGGER.error("Fan device ID is not available; cannot turn on.")
+                return
+
+            response = await self._api.safe_api_call(
+                self._api.toggle_switch, False, self._device_id
+            )
+            if response.get("code") == "000":
+                self._state = True
+                self._available = True
+
+                if percentage is not None:
+                    await self.async_set_percentage(percentage)
+                _LOGGER.info("Fan '%s' turned on successfully.", self._device_name)
+            else:
+                _LOGGER.error("Error turning on fan: %s", response.get("msg"))
+        except Exception as e:
+            self._available = False
+            _LOGGER.error("Error in async_turn_on: %s", e)
+
+    async def async_turn_off(self, **kwargs):
+        """Turn the fan off."""
+        try:
+            if not await self._async_ensure_device_id():
+                _LOGGER.error("Fan device ID is not available; cannot turn off.")
+                return
+
+            response = await self._api.safe_api_call(
+                self._api.toggle_switch, True, self._device_id
+            )
+            if response.get("code") == "000":
+                self._state = False
+                self._available = True
+                _LOGGER.info("Fan '%s' turned off successfully.", self._device_name)
+            else:
+                _LOGGER.error("Error turning off fan: %s", response.get("msg"))
+        except Exception as e:
+            self._available = False
+            _LOGGER.error("Error in async_turn_off: %s", e)
 
     async def async_set_percentage(self, percentage):
         """Set the fan speed percentage."""
+        if percentage <= 0:
+            await self.async_turn_off()
+            return
+
         if percentage < 25:
             _LOGGER.warning("Fan speed percentage below 25% is not allowed.")
             percentage = 25
@@ -87,9 +148,14 @@ class MarsHydroFanEntity(FanEntity):
             percentage = 100
 
         try:
+            if not await self._async_ensure_device_id():
+                _LOGGER.error("Fan device ID is not available; cannot set speed.")
+                return
+
             response = await self._api.set_fanspeed(round(percentage), self._device_id)
             if response.get("code") == "000":
                 self._speed_percentage = percentage
+                self._available = True
                 _LOGGER.info(f"Fan speed set to {percentage}% successfully.")
             else:
                 _LOGGER.error(f"Error setting fan speed: {response.get('msg')}")
@@ -104,6 +170,7 @@ class MarsHydroFanEntity(FanEntity):
             if fan_data:
                 self._device_id = fan_data["id"]
                 self._device_name = fan_data["deviceName"]
+                self._state = not fan_data.get("isClose", False)
                 raw_speed = fan_data.get(
                     "deviceLightRate", 25
                 )  # Use deviceLightRate as the default slider value
@@ -120,7 +187,16 @@ class MarsHydroFanEntity(FanEntity):
                     self._available = False
             else:
                 self._available = False
+                self._state = None
                 _LOGGER.debug("Could not update fan state.")
         except Exception as e:
             self._available = False
             _LOGGER.error(f"Error updating fan state: {e}")
+
+    async def _async_ensure_device_id(self):
+        """Ensure the fan device ID is available before sending commands."""
+        if self._device_id:
+            return True
+
+        await self.async_update()
+        return self._device_id is not None

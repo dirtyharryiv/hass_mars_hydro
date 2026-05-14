@@ -17,10 +17,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
             _LOGGER.debug("No Mars Hydro light found; brightness sensor not created.")
 
         if devices.get("WIND"):
+            temperature_unit = entry.data.get("temperature_unit", "F")
+            temperature_sensor = (
+                MarsHydroFanTemperatureCelsiusSensor(api, entry.entry_id)
+                if temperature_unit == "C"
+                else MarsHydroFanTemperatureSensor(api, entry.entry_id)
+            )
             entities.extend(
                 [
-                    MarsHydroFanTemperatureSensor(api, entry.entry_id),
-                    MarsHydroFanTemperatureCelsiusSensor(api, entry.entry_id),
+                    temperature_sensor,
                     MarsHydroFanHumiditySensor(api, entry.entry_id),
                     MarsHydroFanSpeedSensor(api, entry.entry_id),
                 ]

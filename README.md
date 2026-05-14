@@ -10,85 +10,89 @@
 [![Community Forum][forum-shield]][forum]
 
 ## Mars Hydro Cloud Integration
-This integration communicates with the Mars Hydro Cloud and controls and monitors your Mars Hydro devices (lights and fans) through Home Assistant.
 
-⚠️ Warning: API only supports one device to be logged in, so you will get kicked out of the app as soon as you login. Also make sure, you use the MarsHydro App, not MarsPro. 
+This Home Assistant custom integration communicates with the Mars Hydro Cloud API and exposes supported Mars Hydro lights and fans as Home Assistant entities.
 
-## Additional Note
-Since I only own one device (an FC3000 Light), I initially focused on supporting that device. However, support for **fans** and their controls has now been added. If you have the Bluetooth Stick, this integration should work with your devices.
+## Project Notice
 
-## Features Added:
-- **Fan Entity**:
-  - Control fan speed via a slider (25%-100%).
-  - Monitor fan speed as a percentage.
-- **Fan Sensors**:
-  - **Temperature (°F and °C)**.
-  - **Humidity**.
-  - **Fan speed**.
-- **Device Images**: (work in progress)
-  - Device images are getting displayed in Home Assistant soon
+This project is a fork of [suppqt/hass_mars_hydro](https://github.com/suppqt/hass_mars_hydro).
+AI tools helped during development.
 
-## Background
-- This integration is designed for **Mars Hydro FC...** lights and compatible fans running with the Bluetooth USB Stick.
-- It allows you to:
-  - Control light brightness and fan speed.
-  - Control device power via a switch.
-  - Monitor brightness, temperature, humidity, and fan speed.
-- This integration is built for the Home Assistant platform to manage your Mars Hydro devices through the cloud API.
+## Supported Devices
+
+The integration is intended for Mars Hydro lights and compatible fans connected through the Mars Hydro Bluetooth USB Stick or directly via wifi and visible in the Mars Legacy app (Mars Hydro app).
+
+The integration uses the first light and the first fan returned by the Mars Hydro API. Entity creation depends on the devices found by the API:
+
+- If a light is found, light entities are created.
+- If a fan is found, fan entities are created.
+- If a device type is missing, entities for that device type are skipped.
+
+## Features
+
+- Light brightness control through a Home Assistant light entity.
+- Fan strength control through a Home Assistant fan entity with a 25-100 percent percentage slider.
+- Power switches for detected lights and fans.
+- Brightness sensor for detected lights.
+- Fan sensors for temperature, humidity, and speed.
+- Temperature sensor unit selection during setup: Celsius or Fahrenheit.
+
+## Entities
+
+Detected lights can create:
+
+- `light`: brightness control
+- `switch`: light power
+- `sensor`: brightness percentage
+
+Detected fans can create:
+
+- `fan`: fan strength control
+- `switch`: fan power
+- `sensor`: temperature in the selected unit
+- `sensor`: humidity percentage
+- `sensor`: fan speed in RPM
+
+The temperature setup option creates one temperature sensor, either Celsius or Fahrenheit.
 
 ## Setup
 
-### Installation:
-* Go to HACS -> Integrations
-* Click the three dots on the top right and select `Custom Repositories`
-* Enter `https://github.com/suppqt/ha_mars_hydro` as the repository, select the category `Integration` and click Add.
-* A new custom integration called **Mars Hydro** should now show up in your HACS. Install it.
-* Restart Home Assistant.
+### Installation
 
-### Configuration:
-1. **Login and Connect Devices in the Mars Hydro App**:
-   - Before using this integration, ensure you have logged into the **Mars Hydro app** and connected your devices.
+[![Open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=dirtyharryiv&repository=hass_mars_hydro&category=Integration)
 
-2. **Login**:
-   - The integration will require your **email** and **password** from the Mars Hydro app.
+1. Open the link above and add the repository to HACS.
+2. Install the Mars Hydro integration from HACS.
+3. Restart Home Assistant.
 
-3. **Automatic Device Discovery**:
-   - The integration will fetch device data and create entities for:
-     - **Light brightness control**.
-     - **Fan speed control**.
-     - **Temperature (°F/°C)**.
-     - **Humidity**.
-     - **Fan speed sensor**.
-     - **Switch control for lights and fans**.
+### Configuration
 
-### Entities Created:
-- **Light Brightness Control**: Adjust brightness of your Mars Hydro light.
-- **Fan Speed Control**: Adjust fan speed (slider, 25%-100%).
-- **Temperature Sensors**: Displays fan temperature in °F and °C.
-- **Humidity Sensor**: Displays fan humidity.
-- **Fan Speed Sensor**: Displays fan speed percentage.
-- **Switch Control**: Power on/off for lights and fans.
+1. Sign in to the Mars Hydro app and connect the devices there.
+2. Add the Mars Hydro integration in Home Assistant.
+3. Enter the Mars Hydro account email and password.
+4. Select the temperature unit for the fan temperature sensor: `C` or `F`.
 
-#### Notes:
-- This integration uses the **Mars Hydro Cloud API**. Ensure your devices are connected to the cloud and reachable.
-- You may need to create an account in the Mars Hydro app and provide your credentials to authenticate and link your device.
+## Notes
 
-#### Disclaimer:
-- This is my first custom component, and while I strive for quality, there may still be issues. Feedback and contributions are always appreciated!
+- This integration uses the Mars Hydro Cloud API.
+- Devices must be connected to the Mars Hydro account and reachable through the cloud API.
+- Use the Mars Legacy (Mars Hydro app), not MarsPro.
+- The Mars Hydro API allows a single active app session. Logging in through Home Assistant can sign the account out of the Mars Hydro app.
+- Home Assistant may keep old registry entries after an entity type is removed from the integration. Remove unused entities from the Home Assistant entity registry if needed.
 
-## Contributions are welcome!
+## Contributions
 
-If you want to contribute to this integration, please read the [Contribution guidelines](CONTRIBUTING.md).
+Contributions are welcome. Please read the [Contribution guidelines](CONTRIBUTING.md).
 
 ***
 
 [hacs]: https://github.com/hacs/integration
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
-[commits-shield]: https://img.shields.io/github/commit-activity/y/suppqt/ha_mars_hydro.svg?style=for-the-badge
-[commits]: https://github.com/suppqt/ha_mars_hydro/commits/main
+[commits-shield]: https://img.shields.io/github/commit-activity/y/dirtyharryiv/hass_mars_hydro.svg?style=for-the-badge
+[commits]: https://github.com/dirtyharryiv/hass_mars_hydro/commits/main
 [forum-shield]: https://img.shields.io/badge/community-forum-brightgreen.svg?style=for-the-badge
 [forum]: https://community.home-assistant.io/
-[license-shield]: https://img.shields.io/github/license/suppqt/ha_mars_hydro.svg?style=for-the-badge
-[maintenance-shield]: https://img.shields.io/badge/maintainer-%20%40suppqt-blue.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/suppqt/ha_mars_hydro.svg?style=for-the-badge
-[releases]: https://github.com/suppqt/ha_mars_hydro/releases
+[license-shield]: https://img.shields.io/github/license/dirtyharryiv/hass_mars_hydro.svg?style=for-the-badge
+[maintenance-shield]: https://img.shields.io/badge/maintainer-%20%40dirtyharryiv-blue.svg?style=for-the-badge
+[releases-shield]: https://img.shields.io/github/release/dirtyharryiv/hass_mars_hydro.svg?style=for-the-badge
+[releases]: https://github.com/dirtyharryiv/hass_mars_hydro/releases

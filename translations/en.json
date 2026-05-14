@@ -5,15 +5,16 @@
         },
         "error": {
             "cannot_connect": "Failed to connect",
+            "invalid_email": "Invalid email address",
             "invalid_auth": "Invalid authentication",
             "unknown": "Unexpected error"
         },
         "step": {
             "user": {
                 "data": {
-                    "host": "Host",
+                    "email": "Email",
                     "password": "Password",
-                    "username": "Username"
+                    "temperature_unit": "Temperature unit"
                 }
             }
         }

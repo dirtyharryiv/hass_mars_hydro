@@ -16,6 +16,7 @@ class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self):
         self._email = None
         self._password = None
+        self._temperature_unit = None
 
     async def async_step_user(self, user_input=None) -> FlowResult:
         """Handle the initial step."""
@@ -24,6 +25,7 @@ class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._email = user_input["email"]
             self._password = user_input["password"]
+            self._temperature_unit = user_input["temperature_unit"]
 
             if not self._validate_email(self._email):
                 errors["email"] = "invalid_email"
@@ -32,7 +34,11 @@ class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if login_success:
                     return self.async_create_entry(
                         title="Mars Hydro",
-                        data={"email": self._email, "password": self._password},
+                        data={
+                            "email": self._email,
+                            "password": self._password,
+                            "temperature_unit": self._temperature_unit,
+                        },
                     )
                 else:
                     errors["base"] = "cannot_connect"
@@ -42,6 +48,7 @@ class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required("email"): str,
                 vol.Required("password"): str,
+                vol.Required("temperature_unit", default="C"): vol.In(["C", "F"]),
             }
         )
 
