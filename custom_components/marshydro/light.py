@@ -38,9 +38,7 @@ class MarsHydroBrightnessLight(LightEntity):
     @property
     def name(self):
         """Return the name of the light, dynamically including the device name and ID."""
-        if self._device_name:
-            return self._device_name
-        return "Mars Hydro Brightness Light"
+        return "Brightness"
 
     @property
     def brightness(self):

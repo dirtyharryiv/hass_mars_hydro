@@ -1,6 +1,11 @@
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+)
 import voluptuous as vol
 from .const import DOMAIN
 import logging
@@ -10,6 +15,11 @@ _LOGGER = logging.getLogger(__name__)
 OPTIONS_FLOW_BASE = getattr(
     config_entries, "OptionsFlowWithReload", config_entries.OptionsFlow
 )
+
+TEMPERATURE_UNIT_OPTIONS = [
+    SelectOptionDict(value="C", label="C°"),
+    SelectOptionDict(value="F", label="F°"),
+]
 
 
 class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -52,7 +62,9 @@ class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required("email"): str,
                 vol.Required("password"): str,
-                vol.Required("temperature_unit", default="C"): vol.In(["C", "F"]),
+                vol.Required("temperature_unit", default="C"): SelectSelector(
+                    SelectSelectorConfig(options=TEMPERATURE_UNIT_OPTIONS)
+                ),
             }
         )
 
@@ -107,7 +119,9 @@ class MarsHydroOptionsFlow(OPTIONS_FLOW_BASE):
                         "temperature_unit",
                         self.config_entry.data.get("temperature_unit", "C"),
                     ),
-                ): vol.In(["C", "F"]),
+                ): SelectSelector(
+                    SelectSelectorConfig(options=TEMPERATURE_UNIT_OPTIONS)
+                ),
             }
         )
 

@@ -60,9 +60,7 @@ class MarsHydroBrightnessSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        if self._device_name:
-            return f"{self._device_name} Brightness Sensor"
-        return "Mars Hydro Brightness Sensor"
+        return "Brightness"
 
     @property
     def native_value(self):
@@ -139,9 +137,7 @@ class MarsHydroFanTemperatureSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the fan temperature sensor."""
-        if self._device_name:
-            return f"{self._device_name} Temperature Sensor"
-        return "Mars Hydro Fan Temperature Sensor"
+        return "Temperature"
 
     @property
     def native_value(self):
@@ -226,9 +222,7 @@ class MarsHydroFanTemperatureCelsiusSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the fan temperature sensor (Celsius)."""
-        if self._device_name:
-            return f"{self._device_name} Temperature Sensor (Celsius)"
-        return "Mars Hydro Fan Temperature Sensor (Celsius)"
+        return "Temperature"
 
     @property
     def native_value(self):
@@ -315,9 +309,7 @@ class MarsHydroFanHumiditySensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the fan humidity sensor."""
-        if self._device_name:
-            return f"{self._device_name} Humidity Sensor"
-        return "Mars Hydro Fan Humidity Sensor"
+        return "Humidity"
 
     @property
     def native_value(self):
@@ -402,9 +394,7 @@ class MarsHydroFanSpeedSensor(SensorEntity):
     @property
     def name(self):
         """Return the name of the fan speed sensor."""
-        if self._device_name:
-            return f"{self._device_name} Speed Sensor"
-        return "Mars Hydro Fan Speed Sensor"
+        return "Fan Speed"
 
     @property
     def native_value(self):

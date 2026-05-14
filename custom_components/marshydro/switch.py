@@ -45,9 +45,7 @@ class MarsHydroSwitch(SwitchEntity):
     @property
     def name(self):
         """Return the name of the switch, dynamically including the device name and ID."""
-        if self._device_name:
-            return f"{self._device_name} Switch"
-        return f"Mars Hydro {self._device_type.capitalize()} Switch"
+        return "Switch"
 
     @property
     def is_on(self):

@@ -27,5 +27,13 @@
         }
       }
     }
+  },
+  "selector": {
+    "temperature_unit": {
+      "options": {
+        "C": "C°",
+        "F": "F°"
+      }
+    }
   }
 }

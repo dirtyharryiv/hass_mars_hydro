@@ -40,9 +40,7 @@ class MarsHydroFanEntity(FanEntity):
     @property
     def name(self):
         """Return the name of the fan."""
-        if self._device_name:
-            return f"{self._device_name} Fan"
-        return "Mars Hydro Fan"
+        return "Fan"
 
     @property
     def available(self):
