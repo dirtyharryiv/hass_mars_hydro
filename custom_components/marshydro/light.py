@@ -8,11 +8,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     entry_data = hass.data[DOMAIN][entry.entry_id]
     api = entry_data.get("api")
-    light_data = entry_data.get("devices", {}).get("LIGHT")
+    light_devices = entry_data.get("devices", {}).get("LIGHT", [])
 
-    if api and light_data:
-        light = MarsHydroBrightnessLight(api, entry.entry_id)
-        async_add_entities([light], update_before_add=True)
+    if api and light_devices:
+        async_add_entities(
+            [
+                MarsHydroBrightnessLight(api, entry.entry_id, light_data)
+                for light_data in light_devices
+            ],
+            update_before_add=True,
+        )
     elif api:
         _LOGGER.debug("No Mars Hydro light found; light entity not created.")
 
@@ -20,14 +25,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class MarsHydroBrightnessLight(LightEntity):
     """Representation of the Mars Hydro Light with brightness control only."""
 
-    def __init__(self, api, entry_id):
+    def __init__(self, api, entry_id, light_data):
         self._api = api
-        self._device_id = None  # To store the dynamic device_id
-        self._device_name = None  # To store the dynamic deviceName
+        self._device_id = light_data.get("id")
+        self._device_name = light_data.get("deviceName")
         self._brightness = None
         self._available = False
         self._state = None
         self._entry_id = entry_id
+        self._apply_light_data(light_data)
 
     @property
     def name(self):
@@ -101,13 +107,13 @@ class MarsHydroBrightnessLight(LightEntity):
         try:
             brightness_percentage = round((brightness / 255) * 100)
             response = await self._api.safe_api_call(
-                self._api.set_brightness, brightness_percentage
+                self._api.set_brightness, brightness_percentage, self._device_id
             )
             if response.get("code") == "102":
                 _LOGGER.warning("Token expired, re-authenticating...")
                 await self._api.login()
                 response = await self._api.safe_api_call(
-                    self._api.set_brightness, brightness_percentage
+                    self._api.set_brightness, brightness_percentage, self._device_id
                 )
 
             if response.get("code") != "000":
@@ -124,17 +130,11 @@ class MarsHydroBrightnessLight(LightEntity):
     async def async_update(self):
         """Update the light's state."""
         try:
-            light_data = await self._api.safe_api_call(self._api.get_lightdata)
+            light_data = await self._api.safe_api_call(
+                self._api.get_lightdata, self._device_id
+            )
             if light_data:
-                self._device_id = light_data[
-                    "id"
-                ]  # Set device_id dynamically from the API response
-                self._device_name = light_data[
-                    "deviceName"
-                ]  # Set deviceName dynamically
-                self._brightness = int((light_data["deviceLightRate"] / 100) * 255)
-                self._state = not light_data["isClose"]
-                self._available = True
+                self._apply_light_data(light_data)
                 _LOGGER.debug(
                     f"Updated light: {self._device_name}, brightness: {self._brightness}"
                 )
@@ -146,3 +146,20 @@ class MarsHydroBrightnessLight(LightEntity):
             self._available = False
             self._state = None
             _LOGGER.error(f"Error updating light state: {e}")
+
+    def _apply_light_data(self, light_data):
+        """Apply API data to the light entity."""
+        self._device_id = light_data.get("id")
+        self._device_name = light_data.get("deviceName")
+        raw_brightness = light_data.get("deviceLightRate")
+        try:
+            self._brightness = int((int(raw_brightness) / 100) * 255)
+        except (TypeError, ValueError):
+            _LOGGER.warning(
+                "Invalid brightness data for light %s: %s",
+                self._device_name,
+                raw_brightness,
+            )
+            self._brightness = None
+        self._state = not light_data.get("isClose", False)
+        self._available = True

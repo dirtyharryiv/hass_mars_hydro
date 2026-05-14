@@ -61,7 +61,7 @@ class MarsHydroAPI:
         """Toggle the light or fan switch (on/off)."""
         await self._ensure_token()
 
-        system_data = self._generate_system_data()
+        system_data = self._generate_system_data(device_id)
         headers = {
             "systemData": system_data,
             "Content-Type": "application/json",
@@ -115,53 +115,101 @@ class MarsHydroAPI:
                     _LOGGER.error("Error in API response: %s", response_json.get("msg"))
                     return []
 
-    async def get_lightdata(self):
-        """Retrieve light data from the Mars Hydro API."""
+    def _format_light_data(self, device_data):
+        """Format raw light device data from the Mars Hydro API."""
+        return {
+            "deviceName": device_data.get("deviceName"),
+            "deviceLightRate": device_data.get("deviceLightRate"),
+            "isClose": device_data.get("isClose"),
+            "id": device_data.get("id"),
+            "deviceImage": device_data.get("deviceImg"),
+        }
+
+    def _format_fan_data(self, device_data):
+        """Format raw fan device data from the Mars Hydro API."""
+        return {
+            "deviceName": device_data.get("deviceName"),
+            "deviceLightRate": device_data.get("deviceLightRate"),
+            "humidity": device_data.get("humidity"),
+            "temperature": device_data.get("temperature"),
+            "speed": device_data.get("speed"),
+            "isClose": device_data.get("isClose"),
+            "id": device_data.get("id"),
+            "deviceImage": device_data.get("deviceImg"),
+        }
+
+    async def get_lightdevices(self):
+        """Retrieve all light devices from the Mars Hydro API."""
         device_list = await self._process_device_list("LIGHT")
-        if device_list:
-            device_data = device_list[0]
-            self.device_id = device_data.get("id")  # Store dynamic device_id
-            return {
-                "deviceName": device_data.get("deviceName"),
-                "deviceLightRate": device_data.get("deviceLightRate"),
-                "isClose": device_data.get("isClose"),
-                "id": self.device_id,
-                "deviceImage": device_data.get("deviceImg"),
-            }
-        else:
+        if not device_list:
             _LOGGER.debug("No light devices found.")
+            return []
+
+        devices = [self._format_light_data(device_data) for device_data in device_list]
+        if devices:
+            self.device_id = devices[0].get("id")
+        return devices
+
+    async def get_lightdata(self, device_id=None):
+        """Retrieve light data from the Mars Hydro API."""
+        devices = await self.get_lightdevices()
+        if not devices:
             return None
 
-    async def get_fandata(self):
-        """Retrieve fan data from the Mars Hydro API."""
+        if device_id is None:
+            return devices[0]
+
+        for device_data in devices:
+            if device_data.get("id") == device_id:
+                return device_data
+
+        _LOGGER.debug("Light device %s not found.", device_id)
+        return None
+
+    async def get_fandevices(self):
+        """Retrieve all fan devices from the Mars Hydro API."""
         device_list = await self._process_device_list("WIND")
-        if device_list:
-            device_data = device_list[0]
-            _LOGGER.debug("Fan data retrieved: %s", json.dumps(device_data, indent=2))
-            return {
-                "deviceName": device_data.get("deviceName"),
-                "deviceLightRate": device_data.get("deviceLightRate"),
-                "humidity": device_data.get("humidity"),
-                "temperature": device_data.get("temperature"),
-                "speed": device_data.get("speed"),
-                "isClose": device_data.get("isClose"),
-                "id": device_data.get("id"),
-                "deviceImage": device_data.get("deviceImg"),
-            }
-        else:
+        if not device_list:
             _LOGGER.debug("No fan devices found.")
+            return []
+
+        _LOGGER.debug("Fan data retrieved: %s", json.dumps(device_list, indent=2))
+        return [self._format_fan_data(device_data) for device_data in device_list]
+
+    async def get_fandata(self, device_id=None):
+        """Retrieve fan data from the Mars Hydro API."""
+        devices = await self.get_fandevices()
+        if not devices:
             return None
 
-    async def set_brightness(self, brightness):
+        if device_id is None:
+            return devices[0]
+
+        for device_data in devices:
+            if device_data.get("id") == device_id:
+                return device_data
+
+        _LOGGER.debug("Fan device %s not found.", device_id)
+        return None
+
+    async def set_brightness(self, brightness, device_id=None):
         """Set the brightness of the Mars Hydro light."""
         await self._ensure_token()
 
-        if not self.device_id:
+        if device_id is None:
+            device_id = self.device_id
+
+        if not device_id:
             device_data = await self.get_lightdata()
             if device_data:
-                self.device_id = device_data.get("id")
+                device_id = device_data.get("id")
 
-        system_data = self._generate_system_data()
+        if not device_id:
+            _LOGGER.error("Light device ID is not available; cannot set brightness.")
+            return {"code": "error", "msg": "Light device ID is not available"}
+
+        self.device_id = device_id
+        system_data = self._generate_system_data(device_id)
         headers = {
             "Accept-Encoding": "gzip",
             "Content-Type": "application/json",
@@ -171,7 +219,7 @@ class MarsHydroAPI:
         }
         payload = {
             "light": brightness,
-            "deviceId": self.device_id,
+            "deviceId": device_id,
             "groupId": None,
         }
 
@@ -190,7 +238,7 @@ class MarsHydroAPI:
         """Set the speed of the Mars Hydro fan."""
         await self._ensure_token()
 
-        system_data = self._generate_system_data()
+        system_data = self._generate_system_data(fan_device_id)
         headers = {
             "Accept-Encoding": "gzip",
             "Content-Type": "application/json",
@@ -217,8 +265,9 @@ class MarsHydroAPI:
                 )
                 return response_json
 
-    def _generate_system_data(self):
+    def _generate_system_data(self, device_id=None):
         """Generate systemData payload with dynamic device_id."""
+        system_device_id = device_id if device_id is not None else self.device_id
         return json.dumps(
             {
                 "reqId": int(time.time() * 1000),
@@ -226,7 +275,7 @@ class MarsHydroAPI:
                 "osType": "android",
                 "osVersion": "14",
                 "deviceType": "SM-S928C",
-                "deviceId": self.device_id,
+                "deviceId": system_device_id,
                 "netType": "wifi",
                 "wifiName": "123",
                 "timestamp": int(time.time()),

@@ -6,17 +6,23 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the switch platform."""
     entry_data = hass.data[DOMAIN][entry.entry_id]
     api = entry_data.get("api")
-    devices = entry_data.get("devices", {})
+    light_devices = entry_data.get("devices", {}).get("LIGHT", [])
+    fan_devices = entry_data.get("devices", {}).get("WIND", [])
 
     if api:
         entities = []
 
-        if devices.get("LIGHT"):
-            entities.append(MarsHydroSwitch(api, entry.entry_id, device_type="LIGHT"))
+        if light_devices:
+            entities.extend(
+                [
+                    MarsHydroSwitch(api, entry.entry_id, light_data, device_type="LIGHT")
+                    for light_data in light_devices
+                ]
+            )
         else:
             _LOGGER.debug("No Mars Hydro light found; light switch not created.")
 
-        if devices.get("WIND"):
+        if fan_devices:
             _LOGGER.debug("Fan switch not created; fan entity handles power control.")
 
         if entities:
@@ -26,14 +32,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class MarsHydroSwitch(SwitchEntity):
     """Representation of a Mars Hydro switch."""
 
-    def __init__(self, api, entry_id, device_type):
+    def __init__(self, api, entry_id, device_data, device_type):
         self._api = api
-        self._device_id = None  # To store the dynamic device_id
-        self._device_name = None  # To store the dynamic deviceName
+        self._device_id = device_data.get("id")
+        self._device_name = device_data.get("deviceName")
         self._state = None
         self._available = True
         self._entry_id = entry_id
         self._device_type = device_type  # LIGHT or WIND
+        self._apply_device_data(device_data)
 
     @property
     def name(self):
@@ -121,15 +128,11 @@ class MarsHydroSwitch(SwitchEntity):
             device_data = await self._api.safe_api_call(
                 self._api.get_lightdata
                 if self._device_type == "LIGHT"
-                else self._api.get_fandata
+                else self._api.get_fandata,
+                self._device_id,
             )
             if device_data:
-                self._device_id = device_data["id"]  # Set device_id dynamically
-                self._device_name = device_data[
-                    "deviceName"
-                ]  # Set deviceName dynamically
-                self._state = not device_data["isClose"]
-                self._available = True
+                self._apply_device_data(device_data)
             else:
                 _LOGGER.debug(
                     f"Could not update switch state for {self._device_type}."
@@ -138,3 +141,10 @@ class MarsHydroSwitch(SwitchEntity):
         except Exception as e:
             _LOGGER.error(f"Error updating switch state for {self._device_type}: {e}")
             self._available = False
+
+    def _apply_device_data(self, device_data):
+        """Apply API data to the switch entity."""
+        self._device_id = device_data.get("id")
+        self._device_name = device_data.get("deviceName")
+        self._state = not device_data.get("isClose", False)
+        self._available = True

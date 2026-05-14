@@ -32,37 +32,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Gerät registrieren
     device_registry = dr.async_get(hass)
 
-    # Light-Gerät registrieren
-    light_data = await api.get_lightdata()
-    if light_data:
-        devices["LIGHT"] = light_data
-        device_registry.async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, light_data["id"])},
-            manufacturer="Mars Hydro",
-            name=light_data["deviceName"],
-            model="Mars Hydro Light",
-        )
-        _LOGGER.info(
-            f"Light Device {light_data['deviceName']} wurde erfolgreich registriert."
-        )
+    # Light-Geräte registrieren
+    light_devices = await api.get_lightdevices()
+    devices["LIGHT"] = light_devices
+    if light_devices:
+        for light_data in light_devices:
+            device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, light_data["id"])},
+                manufacturer="Mars Hydro",
+                name=light_data["deviceName"],
+                model="Mars Hydro Light",
+            )
+            _LOGGER.info(
+                f"Light Device {light_data['deviceName']} wurde erfolgreich registriert."
+            )
     else:
         _LOGGER.debug("Kein Light-Gerät gefunden, Registrierung übersprungen.")
 
-    # Fan-Gerät registrieren
-    fan_data = await api.get_fandata()
-    if fan_data:
-        devices["WIND"] = fan_data
-        device_registry.async_get_or_create(
-            config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, fan_data["id"])},
-            manufacturer="Mars Hydro",
-            name=fan_data["deviceName"],
-            model="Mars Hydro Fan",
-        )
-        _LOGGER.info(
-            f"Fan Device {fan_data['deviceName']} wurde erfolgreich registriert."
-        )
+    # Fan-Geräte registrieren
+    fan_devices = await api.get_fandevices()
+    devices["WIND"] = fan_devices
+    if fan_devices:
+        for fan_data in fan_devices:
+            device_registry.async_get_or_create(
+                config_entry_id=entry.entry_id,
+                identifiers={(DOMAIN, fan_data["id"])},
+                manufacturer="Mars Hydro",
+                name=fan_data["deviceName"],
+                model="Mars Hydro Fan",
+            )
+            _LOGGER.info(
+                f"Fan Device {fan_data['deviceName']} wurde erfolgreich registriert."
+            )
     else:
         _LOGGER.debug("Kein Fan-Gerät gefunden, Registrierung übersprungen.")
 

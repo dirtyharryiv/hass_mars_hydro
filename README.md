@@ -22,16 +22,16 @@ AI tools helped during development.
 
 The integration is intended for Mars Hydro lights and compatible fans connected through the Mars Hydro Bluetooth USB Stick or directly via wifi and visible in the Mars Legacy app (Mars Hydro app).
 
-The integration uses the first light and the first fan returned by the Mars Hydro API. Entity creation depends on the devices found by the API:
+Entity creation depends on the devices returned by the Mars Hydro API:
 
-- If a light is found, light entities are created.
-- If a fan is found, fan entities are created.
+- For each light, light entities are created.
+- For each fan, fan entities are created.
 - If a device type is missing, entities for that device type are skipped.
 
 ## Features
 
-- Light brightness control through a Home Assistant light entity.
-- Fan strength control through a Home Assistant fan entity with a 25-100 percent percentage slider.
+- Light brightness control through Home Assistant light entities.
+- Fan strength control through Home Assistant fan entities with a 25-100 percent percentage slider.
 - Power switch for detected lights.
 - Brightness sensor for detected lights.
 - Fan sensors for temperature, humidity, and speed.

@@ -6,32 +6,39 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Mars Hydro sensors."""
     entry_data = hass.data[DOMAIN][entry.entry_id]
     api = entry_data.get("api")
-    devices = entry_data.get("devices", {})
+    light_devices = entry_data.get("devices", {}).get("LIGHT", [])
+    fan_devices = entry_data.get("devices", {}).get("WIND", [])
 
     if api:
         entities = []
 
-        if devices.get("LIGHT"):
-            entities.append(MarsHydroBrightnessSensor(api, entry.entry_id))
+        if light_devices:
+            entities.extend(
+                [
+                    MarsHydroBrightnessSensor(api, entry.entry_id, light_data)
+                    for light_data in light_devices
+                ]
+            )
         else:
             _LOGGER.debug("No Mars Hydro light found; brightness sensor not created.")
 
-        if devices.get("WIND"):
+        if fan_devices:
             temperature_unit = entry.options.get(
                 "temperature_unit", entry.data.get("temperature_unit", "F")
             )
-            temperature_sensor = (
-                MarsHydroFanTemperatureCelsiusSensor(api, entry.entry_id)
-                if temperature_unit == "C"
-                else MarsHydroFanTemperatureSensor(api, entry.entry_id)
-            )
-            entities.extend(
-                [
-                    temperature_sensor,
-                    MarsHydroFanHumiditySensor(api, entry.entry_id),
-                    MarsHydroFanSpeedSensor(api, entry.entry_id),
-                ]
-            )
+            for fan_data in fan_devices:
+                temperature_sensor = (
+                    MarsHydroFanTemperatureCelsiusSensor(api, entry.entry_id, fan_data)
+                    if temperature_unit == "C"
+                    else MarsHydroFanTemperatureSensor(api, entry.entry_id, fan_data)
+                )
+                entities.extend(
+                    [
+                        temperature_sensor,
+                        MarsHydroFanHumiditySensor(api, entry.entry_id, fan_data),
+                        MarsHydroFanSpeedSensor(api, entry.entry_id, fan_data),
+                    ]
+                )
         else:
             _LOGGER.debug("No Mars Hydro fan found; fan sensors not created.")
 
@@ -42,11 +49,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class MarsHydroBrightnessSensor(SensorEntity):
     """Representation of the Mars Hydro brightness sensor."""
 
-    def __init__(self, api, entry_id):
+    def __init__(self, api, entry_id, light_data):
         self._api = api
-        self._device_id = None
-        self._device_name = None
-        self._brightness = None
+        self._device_id = light_data.get("id")
+        self._device_name = light_data.get("deviceName")
+        self._brightness = light_data.get("deviceLightRate")
         self._available = True
         self._entry_id = entry_id
 
@@ -97,12 +104,11 @@ class MarsHydroBrightnessSensor(SensorEntity):
     async def async_update(self):
         """Update the sensor state."""
         try:
-            light_data = await self._api.safe_api_call(self._api.get_lightdata)
+            light_data = await self._api.safe_api_call(
+                self._api.get_lightdata, self._device_id
+            )
             if light_data:
-                self._device_id = light_data["id"]
-                self._device_name = light_data["deviceName"]
-                self._brightness = light_data["deviceLightRate"]
-                self._available = True
+                self._apply_light_data(light_data)
             else:
                 self._available = False
                 _LOGGER.debug("Could not update brightness sensor.")
@@ -110,17 +116,25 @@ class MarsHydroBrightnessSensor(SensorEntity):
             self._available = False
             _LOGGER.error(f"Error updating brightness sensor: {e}")
 
+    def _apply_light_data(self, light_data):
+        """Apply API data to the brightness sensor."""
+        self._device_id = light_data.get("id")
+        self._device_name = light_data.get("deviceName")
+        self._brightness = light_data.get("deviceLightRate")
+        self._available = True
+
 
 class MarsHydroFanTemperatureSensor(SensorEntity):
     """Representation of the Mars Hydro fan temperature sensor."""
 
-    def __init__(self, api, entry_id):
+    def __init__(self, api, entry_id, fan_data):
         self._api = api
-        self._device_id = None
-        self._device_name = None
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
         self._temperature = None
         self._available = True
         self._entry_id = entry_id
+        self._apply_fan_data(fan_data)
 
     @property
     def name(self):
@@ -169,19 +183,11 @@ class MarsHydroFanTemperatureSensor(SensorEntity):
     async def async_update(self):
         """Update the fan temperature sensor state."""
         try:
-            fan_data = await self._api.safe_api_call(self._api.get_fandata)
+            fan_data = await self._api.safe_api_call(
+                self._api.get_fandata, self._device_id
+            )
             if fan_data:
-                self._device_id = fan_data["id"]
-                self._device_name = fan_data["deviceName"]
-                raw_temperature = fan_data["temperature"]
-
-                try:
-                    self._temperature = float(raw_temperature)
-                    self._available = True
-                except (TypeError, ValueError):
-                    _LOGGER.warning("Invalid temperature data: %s", raw_temperature)
-                    self._temperature = None
-                    self._available = False
+                self._apply_fan_data(fan_data)
             else:
                 self._available = False
                 self._temperature = None
@@ -190,17 +196,32 @@ class MarsHydroFanTemperatureSensor(SensorEntity):
             self._available = False
             _LOGGER.error(f"Error updating fan temperature sensor: {e}")
 
+    def _apply_fan_data(self, fan_data):
+        """Apply API data to the fan temperature sensor."""
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
+        raw_temperature = fan_data.get("temperature")
+
+        try:
+            self._temperature = float(raw_temperature)
+            self._available = True
+        except (TypeError, ValueError):
+            _LOGGER.warning("Invalid temperature data: %s", raw_temperature)
+            self._temperature = None
+            self._available = False
+
 
 class MarsHydroFanTemperatureCelsiusSensor(SensorEntity):
     """Representation of the Mars Hydro fan temperature sensor in Celsius."""
 
-    def __init__(self, api, entry_id):
+    def __init__(self, api, entry_id, fan_data):
         self._api = api
-        self._device_id = None
-        self._device_name = None
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
         self._temperature_celsius = None
         self._available = True
         self._entry_id = entry_id
+        self._apply_fan_data(fan_data)
 
     @property
     def name(self):
@@ -249,21 +270,11 @@ class MarsHydroFanTemperatureCelsiusSensor(SensorEntity):
     async def async_update(self):
         """Update the fan temperature in Celsius."""
         try:
-            fan_data = await self._api.safe_api_call(self._api.get_fandata)
+            fan_data = await self._api.safe_api_call(
+                self._api.get_fandata, self._device_id
+            )
             if fan_data:
-                self._device_id = fan_data["id"]
-                self._device_name = fan_data["deviceName"]
-                raw_temperature = fan_data["temperature"]
-
-                try:
-                    self._temperature_celsius = round(
-                        (float(raw_temperature) - 32) * 5 / 9, 1
-                    )
-                    self._available = True
-                except (TypeError, ValueError):
-                    _LOGGER.warning("Invalid temperature data: %s", raw_temperature)
-                    self._temperature_celsius = None
-                    self._available = False
+                self._apply_fan_data(fan_data)
             else:
                 self._available = False
                 self._temperature_celsius = None
@@ -272,17 +283,34 @@ class MarsHydroFanTemperatureCelsiusSensor(SensorEntity):
             self._available = False
             _LOGGER.error(f"Error updating fan temperature (Celsius) sensor: {e}")
 
+    def _apply_fan_data(self, fan_data):
+        """Apply API data to the fan temperature sensor."""
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
+        raw_temperature = fan_data.get("temperature")
+
+        try:
+            self._temperature_celsius = round(
+                (float(raw_temperature) - 32) * 5 / 9, 1
+            )
+            self._available = True
+        except (TypeError, ValueError):
+            _LOGGER.warning("Invalid temperature data: %s", raw_temperature)
+            self._temperature_celsius = None
+            self._available = False
+
 
 class MarsHydroFanHumiditySensor(SensorEntity):
     """Representation of the Mars Hydro fan humidity sensor."""
 
-    def __init__(self, api, entry_id):
+    def __init__(self, api, entry_id, fan_data):
         self._api = api
-        self._device_id = None
-        self._device_name = None
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
         self._humidity = None
         self._available = True
         self._entry_id = entry_id
+        self._apply_fan_data(fan_data)
 
     @property
     def name(self):
@@ -331,19 +359,11 @@ class MarsHydroFanHumiditySensor(SensorEntity):
     async def async_update(self):
         """Update the fan humidity sensor state."""
         try:
-            fan_data = await self._api.safe_api_call(self._api.get_fandata)
+            fan_data = await self._api.safe_api_call(
+                self._api.get_fandata, self._device_id
+            )
             if fan_data:
-                self._device_id = fan_data["id"]
-                self._device_name = fan_data["deviceName"]
-                raw_humidity = fan_data["humidity"]
-
-                try:
-                    self._humidity = float(raw_humidity)
-                    self._available = True
-                except (TypeError, ValueError):
-                    _LOGGER.warning("Invalid humidity data: %s", raw_humidity)
-                    self._humidity = None
-                    self._available = False
+                self._apply_fan_data(fan_data)
             else:
                 self._available = False
                 self._humidity = None
@@ -352,17 +372,32 @@ class MarsHydroFanHumiditySensor(SensorEntity):
             self._available = False
             _LOGGER.error(f"Error updating fan humidity sensor: {e}")
 
+    def _apply_fan_data(self, fan_data):
+        """Apply API data to the fan humidity sensor."""
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
+        raw_humidity = fan_data.get("humidity")
+
+        try:
+            self._humidity = float(raw_humidity)
+            self._available = True
+        except (TypeError, ValueError):
+            _LOGGER.warning("Invalid humidity data: %s", raw_humidity)
+            self._humidity = None
+            self._available = False
+
 
 class MarsHydroFanSpeedSensor(SensorEntity):
     """Representation of the Mars Hydro fan speed sensor."""
 
-    def __init__(self, api, entry_id):
+    def __init__(self, api, entry_id, fan_data):
         self._api = api
-        self._device_id = None
-        self._device_name = None
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
         self._speed = None
         self._available = True
         self._entry_id = entry_id
+        self._apply_fan_data(fan_data)
 
     @property
     def name(self):
@@ -411,19 +446,11 @@ class MarsHydroFanSpeedSensor(SensorEntity):
     async def async_update(self):
         """Update the fan speed sensor state."""
         try:
-            fan_data = await self._api.safe_api_call(self._api.get_fandata)
+            fan_data = await self._api.safe_api_call(
+                self._api.get_fandata, self._device_id
+            )
             if fan_data:
-                self._device_id = fan_data["id"]
-                self._device_name = fan_data["deviceName"]
-                raw_speed = fan_data.get("speed")
-
-                try:
-                    self._speed = int(raw_speed)
-                    self._available = True
-                except (TypeError, ValueError):
-                    _LOGGER.warning("Invalid speed data: %s", raw_speed)
-                    self._speed = None
-                    self._available = False
+                self._apply_fan_data(fan_data)
             else:
                 self._available = False
                 self._speed = None
@@ -431,3 +458,17 @@ class MarsHydroFanSpeedSensor(SensorEntity):
         except Exception as e:
             self._available = False
             _LOGGER.error(f"Error updating fan speed sensor: {e}")
+
+    def _apply_fan_data(self, fan_data):
+        """Apply API data to the fan speed sensor."""
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
+        raw_speed = fan_data.get("speed")
+
+        try:
+            self._speed = int(raw_speed)
+            self._available = True
+        except (TypeError, ValueError):
+            _LOGGER.warning("Invalid speed data: %s", raw_speed)
+            self._speed = None
+            self._available = False

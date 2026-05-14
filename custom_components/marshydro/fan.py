@@ -6,11 +6,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Mars Hydro fan entity."""
     entry_data = hass.data[DOMAIN][entry.entry_id]
     api = entry_data.get("api")
-    fan_data = entry_data.get("devices", {}).get("WIND")
+    fan_devices = entry_data.get("devices", {}).get("WIND", [])
 
-    if api and fan_data:
-        fan_entity = MarsHydroFanEntity(api, entry.entry_id)
-        async_add_entities([fan_entity], update_before_add=True)
+    if api and fan_devices:
+        async_add_entities(
+            [
+                MarsHydroFanEntity(api, entry.entry_id, fan_data)
+                for fan_data in fan_devices
+            ],
+            update_before_add=True,
+        )
         _LOGGER.info("Mars Hydro fan entity added successfully.")
     elif api:
         _LOGGER.debug("No Mars Hydro fan found; fan entity not created.")
@@ -21,15 +26,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class MarsHydroFanEntity(FanEntity):
     """Representation of a Mars Hydro fan."""
 
-    def __init__(self, api, entry_id):
+    def __init__(self, api, entry_id, fan_data):
         self._api = api
-        self._device_id = None
-        self._device_name = None
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
         self._speed_percentage = None
         self._state = None
         self._available = True
         self._entry_id = entry_id
         self._enable_turn_on_off_backwards_compatibility = False
+        self._apply_fan_data(fan_data)
 
     @property
     def name(self):
@@ -150,7 +156,9 @@ class MarsHydroFanEntity(FanEntity):
                 _LOGGER.error("Fan device ID is not available; cannot set speed.")
                 return
 
-            response = await self._api.set_fanspeed(round(percentage), self._device_id)
+            response = await self._api.safe_api_call(
+                self._api.set_fanspeed, round(percentage), self._device_id
+            )
             if response.get("code") == "000":
                 self._speed_percentage = percentage
                 self._available = True
@@ -164,25 +172,11 @@ class MarsHydroFanEntity(FanEntity):
     async def async_update(self):
         """Update the fan state."""
         try:
-            fan_data = await self._api.safe_api_call(self._api.get_fandata)
+            fan_data = await self._api.safe_api_call(
+                self._api.get_fandata, self._device_id
+            )
             if fan_data:
-                self._device_id = fan_data["id"]
-                self._device_name = fan_data["deviceName"]
-                self._state = not fan_data.get("isClose", False)
-                raw_speed = fan_data.get(
-                    "deviceLightRate", 25
-                )  # Use deviceLightRate as the default slider value
-
-                try:
-                    # Convert speed to integer and clamp it
-                    self._speed_percentage = min(max(int(raw_speed), 25), 100)
-                    self._available = True
-                except (TypeError, ValueError):
-                    _LOGGER.warning(
-                        f"Invalid speed data for fan {self._device_name}: {raw_speed}"
-                    )
-                    self._speed_percentage = None
-                    self._available = False
+                self._apply_fan_data(fan_data)
             else:
                 self._available = False
                 self._state = None
@@ -198,3 +192,20 @@ class MarsHydroFanEntity(FanEntity):
 
         await self.async_update()
         return self._device_id is not None
+
+    def _apply_fan_data(self, fan_data):
+        """Apply API data to the fan entity."""
+        self._device_id = fan_data.get("id")
+        self._device_name = fan_data.get("deviceName")
+        self._state = not fan_data.get("isClose", False)
+        raw_speed = fan_data.get("deviceLightRate", 25)
+
+        try:
+            self._speed_percentage = min(max(int(raw_speed), 25), 100)
+            self._available = True
+        except (TypeError, ValueError):
+            _LOGGER.warning(
+                f"Invalid speed data for fan {self._device_name}: {raw_speed}"
+            )
+            self._speed_percentage = None
+            self._available = False
