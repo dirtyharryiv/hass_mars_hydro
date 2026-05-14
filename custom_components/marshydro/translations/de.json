@@ -10,6 +10,11 @@
       "unknown": "Unerwarteter Fehler"
     },
     "step": {
+      "init": {
+        "data": {
+          "temperature_unit": "Temperatureinheit"
+        }
+      },
       "user": {
         "data": {
           "email": "E-Mail",
@@ -22,6 +27,11 @@
   "options": {
     "step": {
       "init": {
+        "data": {
+          "temperature_unit": "Temperatureinheit"
+        }
+      },
+      "user": {
         "data": {
           "temperature_unit": "Temperatureinheit"
         }

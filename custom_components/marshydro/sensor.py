@@ -1,4 +1,9 @@
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
+from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from . import _LOGGER, DOMAIN
 
 
@@ -152,7 +157,22 @@ class MarsHydroFanTemperatureSensor(SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement."""
-        return "°F"
+        return UnitOfTemperature.FAHRENHEIT
+
+    @property
+    def device_class(self):
+        """Return the device class."""
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def state_class(self):
+        """Return the state class."""
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def icon(self):
+        """Return the icon."""
+        return "mdi:thermometer"
 
     @property
     def unique_id(self):
@@ -237,7 +257,22 @@ class MarsHydroFanTemperatureCelsiusSensor(SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement."""
-        return "°C"
+        return UnitOfTemperature.CELSIUS
+
+    @property
+    def device_class(self):
+        """Return the device class."""
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def state_class(self):
+        """Return the state class."""
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def icon(self):
+        """Return the icon."""
+        return "mdi:thermometer"
 
     @property
     def unique_id(self):
@@ -324,7 +359,22 @@ class MarsHydroFanHumiditySensor(SensorEntity):
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement."""
-        return "%"
+        return PERCENTAGE
+
+    @property
+    def device_class(self):
+        """Return the device class."""
+        return SensorDeviceClass.HUMIDITY
+
+    @property
+    def state_class(self):
+        """Return the state class."""
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def icon(self):
+        """Return the icon."""
+        return "mdi:water-percent"
 
     @property
     def unique_id(self):
@@ -410,6 +460,16 @@ class MarsHydroFanSpeedSensor(SensorEntity):
     def native_unit_of_measurement(self):
         """Return the unit of measurement."""
         return "RPM"
+
+    @property
+    def state_class(self):
+        """Return the state class."""
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def icon(self):
+        """Return the icon."""
+        return "mdi:fan"
 
     @property
     def unique_id(self):

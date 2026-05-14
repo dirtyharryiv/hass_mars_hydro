@@ -1,6 +1,11 @@
 {
   "config": {
     "step": {
+      "init": {
+        "data": {
+          "temperature_unit": "Temperature unit"
+        }
+      },
       "user": {
         "data": {
           "email": "Email",
@@ -22,6 +27,11 @@
   "options": {
     "step": {
       "init": {
+        "data": {
+          "temperature_unit": "Temperature unit"
+        }
+      },
+      "user": {
         "data": {
           "temperature_unit": "Temperature unit"
         }

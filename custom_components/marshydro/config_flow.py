@@ -22,6 +22,19 @@ TEMPERATURE_UNIT_OPTIONS = [
 ]
 
 
+def _temperature_unit_selector():
+    """Return the temperature unit selector."""
+    try:
+        config = SelectSelectorConfig(
+            options=TEMPERATURE_UNIT_OPTIONS,
+            translation_key="temperature_unit",
+        )
+    except TypeError:
+        config = SelectSelectorConfig(options=TEMPERATURE_UNIT_OPTIONS)
+
+    return SelectSelector(config)
+
+
 class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Mars Hydro."""
 
@@ -62,9 +75,9 @@ class MarsHydroConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required("email"): str,
                 vol.Required("password"): str,
-                vol.Required("temperature_unit", default="C"): SelectSelector(
-                    SelectSelectorConfig(options=TEMPERATURE_UNIT_OPTIONS)
-                ),
+                vol.Required(
+                    "temperature_unit", default="C"
+                ): _temperature_unit_selector(),
             }
         )
 
@@ -119,9 +132,7 @@ class MarsHydroOptionsFlow(OPTIONS_FLOW_BASE):
                         "temperature_unit",
                         self.config_entry.data.get("temperature_unit", "C"),
                     ),
-                ): SelectSelector(
-                    SelectSelectorConfig(options=TEMPERATURE_UNIT_OPTIONS)
-                ),
+                ): _temperature_unit_selector(),
             }
         )
 
